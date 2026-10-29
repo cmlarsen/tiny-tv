@@ -12,6 +12,8 @@ namespace {
 
 constexpr int kDayStartHour = 7;
 constexpr int kDayEndHour = 20;
+constexpr int kRainCodeMinPct = 20;
+constexpr int kRainLikelyPct = 50;
 
 const char* const kSunny[] = {
     "Sunny and nice {d}! Go play outside!",
@@ -131,7 +133,8 @@ Mood classify(const DayWeather& d) {
   const int c = d.code;
   if (c >= 95 && c <= 99) return Mood::Storm;
   if ((c >= 71 && c <= 77) || c == 85 || c == 86) return Mood::Snow;
-  if ((c >= 51 && c <= 67) || (c >= 80 && c <= 82) || d.precipPct >= 50) return Mood::Rain;
+  const bool rainCode = (c >= 51 && c <= 67) || (c >= 80 && c <= 82);
+  if ((rainCode && d.precipPct >= kRainCodeMinPct) || d.precipPct >= kRainLikelyPct) return Mood::Rain;
   if (d.maxF >= 88) return Mood::Hot;
   if (d.maxF <= 40) return Mood::Cold;
   if (d.windMph >= 25) return Mood::Windy;

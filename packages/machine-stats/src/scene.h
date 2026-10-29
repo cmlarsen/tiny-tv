@@ -12,9 +12,9 @@ struct SceneState {
   int detail = 0;
   const Machine* machines = nullptr;
   int count = 0;
-  char clock[8] = "";
   char info[5][40] = {};
   float resetProgress = -1;
+  bool resetArmed = false;
   const char* qr = nullptr;
 };
 

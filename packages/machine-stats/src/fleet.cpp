@@ -98,10 +98,23 @@ void reconfigure(const char* endpointList) {
   xSemaphoreGive(lock);
 }
 
-int snapshot(Machine* out, int max) {
+int snapshot(Machine* out, int max, int historyFor) {
   xSemaphoreTake(lock, portMAX_DELAY);
   const int n = count < max ? count : max;
-  for (int i = 0; i < n; i++) out[i] = machines[i];
+  for (int i = 0; i < n; i++) {
+    const Machine& m = machines[i];
+    Machine& o = out[i];
+    o.ep = m.ep;
+    o.stats = m.stats;
+    o.everSeen = m.everSeen;
+    o.online = m.online;
+    o.failures = m.failures;
+    o.lastOkMs = m.lastOkMs;
+    if (historyFor >= 0 && i == historyFor % n) {
+      o.cpu = m.cpu;
+      o.mem = m.mem;
+    }
+  }
   xSemaphoreGive(lock);
   return n;
 }

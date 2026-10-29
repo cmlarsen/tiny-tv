@@ -17,7 +17,7 @@ Settings can be changed later at `http://piggy.local` (or the IP on the info scr
 |---|---|
 | Tap | Show tomorrow (tap again or wait 15 s to go back) |
 | Hold 3 s | Info screen (place, IP, last update) |
-| Hold 10 s | Forget WiFi and settings, back to setup |
+| Hold 3 s, let go, hold 5 s | Forget WiFi and settings, back to setup (the second hold must start within 30 s) |
 
 From 8 pm to 7 am the pig sleeps and the screen dims. Tap to peek at tomorrow.
 

@@ -495,6 +495,9 @@ void drawInfoView(Canvas& c, const SceneState& s) {
     c.roundRect(20, 210, 200, 14, 7, rgb(70, 70, 90));
     const int w = (int)(200 * min(1.0f, s.resetProgress));
     if (w > 14) c.roundRect(20, 210, w, 14, 7, rgb(255, 120, 150));
+  } else if (s.resetArmed) {
+    c.text("Hold 5 s to reset WiFi", 120, 196, rgb(160, 160, 180), middle_center);
+    c.text("Tap to go back", 120, 220, rgb(160, 160, 180), middle_center);
   } else {
     c.text("Tap to go back", 120, 214, rgb(160, 160, 180), middle_center);
   }

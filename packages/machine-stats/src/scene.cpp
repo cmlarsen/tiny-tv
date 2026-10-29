@@ -12,7 +12,7 @@ using statslogic::Level;
 namespace {
 
 constexpr int kW = nmtv::kScreen;
-constexpr int kOverviewRows = 4;
+constexpr int kCompactRowH = 56;
 
 constexpr uint16_t kBg = rgb(14, 16, 24);
 constexpr uint16_t kCard = rgb(28, 32, 46);
@@ -61,8 +61,27 @@ void offlineLabel(const Machine& m, uint32_t now, char* buf, size_t len) {
   snprintf(buf, len, "offline - seen %s ago", age);
 }
 
+void compactRow(Canvas& c, const Machine& m, float cpu, float mem, int y0, int rowH, uint32_t now) {
+  c.roundRect(6, y0 + 2, 228, rowH - 4, 8, kCard);
+  const int nameY = y0 + rowH * 32 / 100;
+  const int barY = y0 + rowH * 72 / 100;
+  statusDot(c, 16, nameY, m);
+  c.font(&fonts::FreeSansBold9pt7b);
+  c.text(m.stats.host, 26, nameY, m.online ? kText : kOffline, middle_left);
+  if (!m.online) {
+    char buf[32];
+    offlineLabel(m, now, buf, sizeof buf);
+    c.text(buf, 16, barY, kOffline, middle_left);
+    return;
+  }
+  bar(c, 16, barY - 4, 60, 8, cpu, levelColor(cpu));
+  percentText(c, cpu, 116, barY, kText, middle_right);
+  bar(c, 128, barY - 4, 60, 8, mem, levelColor(mem));
+  percentText(c, mem, 228, barY, kText, middle_right);
+}
+
 void overview(Canvas& c, const SceneState& s, const float* cpu, const float* mem, uint32_t now) {
-  const int n = min(s.count, kOverviewRows);
+  const int n = s.count;
   if (n == 0) {
     c.text("No machines configured", 120, 130, kDim, middle_center);
     return;
@@ -71,6 +90,10 @@ void overview(Canvas& c, const SceneState& s, const float* cpu, const float* mem
   for (int i = 0; i < n; i++) {
     const Machine& m = s.machines[i];
     const int y0 = i * rowH;
+    if (rowH < kCompactRowH) {
+      compactRow(c, m, cpu[i], mem[i], y0, rowH, now);
+      continue;
+    }
     c.roundRect(6, y0 + 2, 228, rowH - 4, 10, kCard);
 
     const int nameY = y0 + rowH * 22 / 100;
@@ -182,6 +205,9 @@ void info(Canvas& c, const SceneState& s) {
     c.roundRect(20, 210, 200, 14, 7, kTrack);
     const int w = (int)(200 * min(1.0f, s.resetProgress));
     if (w > 14) c.roundRect(20, 210, w, 14, 7, kHot);
+  } else if (s.resetArmed) {
+    c.text("Hold 5 s to reset WiFi", 120, 196, kDim, middle_center);
+    c.text("Tap to go back", 120, 220, kDim, middle_center);
   } else {
     c.text("Tap to go back", 120, 214, kDim, middle_center);
   }

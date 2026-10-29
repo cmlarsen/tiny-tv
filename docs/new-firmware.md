@@ -91,9 +91,12 @@ redraw less often on static screens (the template drops to 1 fps on the setup sc
 |---|---|---|
 | `Tap` | on release, if held under 3 s | the main action (next screen, toggle) |
 | `Hold` | once at 3 s | info screen (IP, settings URL) |
-| `LongHold` | once at 10 s | `nmtv::portal::resetAll()` (forget WiFi and settings) |
+| `Reset` | 5 s into a second hold that starts within 30 s of releasing a `Hold` | `nmtv::portal::resetAll()` (forget WiFi and settings) |
 
-Keep `LongHold` as the reset so every firmware can be recovered the same way.
+Keep `Reset` as the reset so every firmware can be recovered the same way. It needs a release
+between the two holds so a pad that reads as pressed forever (drift, a moved cable) can't wipe
+settings; a press lasting over 60 s is treated as drift and re-baselined. Show
+`touch.resetArmed(now)` and `touch.resetProgress(now)` on your info screen.
 
 ### Networking
 
@@ -132,7 +135,7 @@ restores them.
 - [ ] `./hud test` passes for every package
 - [ ] `./hud build <name>` succeeds
 - [ ] Setup screen shows the QR code, hotspot name and `192.168.4.1`
-- [ ] `LongHold` resets WiFi and settings
+- [ ] The hold, release, hold `Reset` gesture resets WiFi and settings
 - [ ] Screenshots of each screen checked with `./hud shot`
 - [ ] Row added to the package table in the root README
 - [ ] New shared versions go in `platformio/nmtv.ini`, not the package

@@ -10,7 +10,6 @@ Settings current{};
 nmtv::PortalField fields[] = {
     {"machines", "Machines (IP or IP:port, comma separated)", "192.168.68.77,192.168.68.59,192.168.68.68",
      current.machines, sizeof current.machines},
-    {"tz", "Time zone (POSIX TZ)", "EST5EDT,M3.2.0,M11.1.0", current.tz, sizeof current.tz},
 };
 
 }  // namespace

@@ -102,7 +102,7 @@ void loop() {
 
   switch (touch.poll(now)) {
     case TouchPad::Event::Tap: taps++; break;
-    case TouchPad::Event::LongHold: nmtv::portal::resetAll(); break;
+    case TouchPad::Event::Reset: nmtv::portal::resetAll(); break;
     default: break;
   }
 
