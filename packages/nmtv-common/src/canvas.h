@@ -50,4 +50,14 @@ struct Canvas {
   void qr(const char* str, int x, int y, int w) { s.qrcode(str, x, y - oy, w); }
 };
 
+template <typename DrawFn>
+void renderBands(LGFX_Sprite& band, DrawFn draw, Print* dump = nullptr) {
+  for (int oy = 0; oy < kScreen; oy += kBandH) {
+    Canvas c{band, oy};
+    draw(c);
+    band.pushSprite(0, oy);
+    if (dump) dump->write(static_cast<const uint8_t*>(band.getBuffer()), kScreen * kBandH * 2);
+  }
+}
+
 }  // namespace nmtv

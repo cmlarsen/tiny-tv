@@ -3,7 +3,7 @@
 #include <math.h>
 
 #include "canvas.h"
-#include "net.h"
+#include "portal.h"
 
 using nmtv::Canvas;
 using nmtv::rgb;
@@ -196,7 +196,7 @@ void setup(Canvas& c, const SceneState& s) {
   }
   c.font(&fonts::FreeSansBold9pt7b);
   c.text("1. Scan, or join WiFi", 120, 156, kDim, middle_center);
-  c.text(kApName, 120, 176, kText, middle_center);
+  c.text(nmtv::portal::apName(), 120, 176, kText, middle_center);
   c.text("2. Open in a browser", 120, 202, kDim, middle_center);
   c.text("192.168.4.1", 120, 222, kCpuLine, middle_center);
 }

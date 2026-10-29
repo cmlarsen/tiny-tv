@@ -59,3 +59,14 @@ class LGFX : public lgfx::LGFX_Device {
     setPanel(&panel_);
   }
 };
+
+namespace nmtv {
+
+inline void beginDisplay(LGFX& lcd) {
+  pinMode(board::kTftPower, OUTPUT);
+  digitalWrite(board::kTftPower, LOW);
+  delay(20);
+  lcd.init();
+}
+
+}  // namespace nmtv

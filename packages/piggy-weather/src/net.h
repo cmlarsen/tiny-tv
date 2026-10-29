@@ -4,13 +4,12 @@
 
 #include "piglogic.h"
 
-constexpr const char* kApName = "Piggy-Weather";
-constexpr const char* kApQr = "WIFI:T:nopass;S:Piggy-Weather;;";
-
 struct Settings {
   char name[21];
   char city[41];
-  bool celsius;
+  char units[2];
+
+  bool celsius() const { return units[0] == 'C' || units[0] == 'c'; }
 };
 
 namespace net {

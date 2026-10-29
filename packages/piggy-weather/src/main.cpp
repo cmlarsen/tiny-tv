@@ -5,6 +5,7 @@
 #include "display.h"
 #include "net.h"
 #include "piglogic.h"
+#include "portal.h"
 #include "scene.h"
 #include "touch.h"
 
@@ -85,7 +86,7 @@ void fillInfo(uint32_t now) {
   } else {
     snprintf(st.info[3], sizeof st.info[3], "No weather yet");
   }
-  snprintf(st.info[4], sizeof st.info[4], "Units: %s", cfg.celsius ? "Celsius" : "Fahrenheit");
+  snprintf(st.info[4], sizeof st.info[4], "Units: %s", cfg.celsius() ? "Celsius" : "Fahrenheit");
 }
 
 void buildState(uint32_t now) {
@@ -117,16 +118,16 @@ void buildState(uint32_t now) {
 
   st.view = v;
   st.haveWeather = have;
-  st.qr = v == View::Setup ? kApQr : nullptr;
+  st.qr = v == View::Setup ? nmtv::portal::apQr() : nullptr;
 
   const bool useTomorrow = v == View::Tomorrow || v == View::Night;
   const piglogic::DayWeather& d = f.days[useTomorrow ? 1 : 0];
   st.mood = forcedMood >= 0 ? static_cast<Mood>(forcedMood) : piglogic::classify(d);
-  st.hi = piglogic::toDisplayTemp(d.maxF, cfg.celsius);
-  st.lo = piglogic::toDisplayTemp(d.minF, cfg.celsius);
+  st.hi = piglogic::toDisplayTemp(d.maxF, cfg.celsius());
+  st.lo = piglogic::toDisplayTemp(d.minF, cfg.celsius());
   st.precip = d.precipPct;
   if (v == View::Today) {
-    st.bigTemp = piglogic::toDisplayTemp(f.nowF, cfg.celsius);
+    st.bigTemp = piglogic::toDisplayTemp(f.nowF, cfg.celsius());
     st.bigLabel = "now";
   } else {
     st.bigTemp = st.hi;
@@ -228,11 +229,7 @@ void handleSerial(uint32_t now) {
 void setup() {
   Serial.begin(230400);
   Serial.setTimeout(50);
-  pinMode(board::kTftPower, OUTPUT);
-  digitalWrite(board::kTftPower, LOW);
-  delay(20);
-
-  lcd.init();
+  nmtv::beginDisplay(lcd);
   setBrightness(kDayBrightness);
   if (!scene.begin()) Serial.println("[main] sprite alloc failed");
   touch.begin(board::kTouch);

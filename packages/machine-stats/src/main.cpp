@@ -6,6 +6,7 @@
 #include "display.h"
 #include "fleet.h"
 #include "net.h"
+#include "portal.h"
 #include "scene.h"
 #include "touch.h"
 
@@ -42,7 +43,7 @@ void setMode(Mode m, uint32_t now, uint32_t durationMs) {
 }
 
 void fillInfo() {
-  snprintf(st.info[0], sizeof st.info[0], "IP: %s", net::ip().c_str());
+  snprintf(st.info[0], sizeof st.info[0], "IP: %s", nmtv::portal::ip().c_str());
   snprintf(st.info[1], sizeof st.info[1], "Settings: stats.local");
   snprintf(st.info[2], sizeof st.info[2], "Watching %d machines", st.count);
   snprintf(st.info[3], sizeof st.info[3], "Polling every %lus", (unsigned long)(kPollMs / 1000));
@@ -62,14 +63,14 @@ void buildState(uint32_t now) {
 
   View v;
   if (forcedView >= 0) v = static_cast<View>(forcedView);
-  else if (!net::online()) v = WiFi.getMode() & WIFI_AP ? View::Setup : View::Connecting;
+  else if (!nmtv::portal::online()) v = WiFi.getMode() & WIFI_AP ? View::Setup : View::Connecting;
   else if (mode == Mode::Info) v = View::Info;
   else if (mode == Mode::Detail) v = View::Detail;
   else v = View::Overview;
 
   st.view = v;
   st.detail = forcedView >= 0 ? forcedDetail : detailIndex;
-  st.qr = v == View::Setup ? kApQr : nullptr;
+  st.qr = v == View::Setup ? nmtv::portal::apQr() : nullptr;
   if (v == View::Info) fillInfo();
 
   const uint32_t held = touch.heldFor(now);
@@ -103,7 +104,7 @@ void handleTouch(uint32_t now) {
       setMode(Mode::Info, now, kInfoMs);
       break;
     case TouchPad::Event::LongHold:
-      net::resetAll();
+      nmtv::portal::resetAll();
       break;
     case TouchPad::Event::None:
       break;
@@ -147,11 +148,7 @@ void handleSerial(uint32_t now) {
 void setup() {
   Serial.begin(230400);
   Serial.setTimeout(50);
-  pinMode(board::kTftPower, OUTPUT);
-  digitalWrite(board::kTftPower, LOW);
-  delay(20);
-
-  lcd.init();
+  nmtv::beginDisplay(lcd);
   lcd.setBrightness(kBrightness);
   if (!scene.begin()) Serial.println("[main] sprite alloc failed");
   touch.begin(board::kTouch);
@@ -165,12 +162,12 @@ void loop() {
   static uint32_t lastFrameMs = 0;
   const uint32_t now = millis();
 
-  net::loop();
-  if (net::online() && !clockStarted) {
+  nmtv::portal::loop();
+  if (nmtv::portal::online() && !clockStarted) {
     configTzTime(net::settings().tz, "pool.ntp.org", "time.nist.gov");
     clockStarted = true;
   }
-  if (net::takeSettingsChanged()) {
+  if (nmtv::portal::takeSettingsChanged()) {
     fleet::reconfigure(net::settings().machines);
     configTzTime(net::settings().tz, "pool.ntp.org", "time.nist.gov");
   }

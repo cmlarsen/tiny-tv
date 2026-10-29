@@ -1,51 +1,26 @@
 #include "net.h"
 
-#include <ESPmDNS.h>
 #include <HTTPClient.h>
-#include <Preferences.h>
 #include <WiFi.h>
-#include <WiFiManager.h>
+
+#include "portal.h"
 
 namespace net {
 namespace {
 
-WiFiManager wm;
-Preferences prefs;
 Settings current{};
-bool changed = false;
 piglogic::Place place{};
 bool placeValid = false;
-bool isOnline = false;
 
-WiFiManagerParameter* nameParam = nullptr;
-WiFiManagerParameter* cityParam = nullptr;
-WiFiManagerParameter* unitsParam = nullptr;
+nmtv::PortalField fields[] = {
+    {"name", "Kid's name", "Zed", current.name, sizeof current.name},
+    {"city", "City or ZIP code (blank = guess)", "", current.city, sizeof current.city},
+    {"units", "Units: F or C", "F", current.units, sizeof current.units},
+};
 
 void copyField(char* dst, size_t cap, const char* src) {
   strncpy(dst, src ? src : "", cap - 1);
   dst[cap - 1] = '\0';
-}
-
-void loadSettings() {
-  prefs.begin("piggy", true);
-  copyField(current.name, sizeof current.name, prefs.getString("name", "Zed").c_str());
-  copyField(current.city, sizeof current.city, prefs.getString("city", "").c_str());
-  current.celsius = prefs.getBool("celsius", false);
-  prefs.end();
-}
-
-void saveParams() {
-  copyField(current.name, sizeof current.name, nameParam->getValue());
-  copyField(current.city, sizeof current.city, cityParam->getValue());
-  const char u = unitsParam->getValue()[0];
-  current.celsius = (u == 'C' || u == 'c');
-  prefs.begin("piggy", false);
-  prefs.putString("name", current.name);
-  prefs.putString("city", current.city);
-  prefs.putBool("celsius", current.celsius);
-  prefs.end();
-  placeValid = false;
-  changed = true;
 }
 
 String urlEncode(const char* s) {
@@ -95,57 +70,22 @@ bool locate() {
   return false;
 }
 
-void onConnected() {
-  isOnline = true;
-  changed = false;
-  MDNS.begin("piggy");
-  std::vector<const char*> menu = {"param", "wifi", "info", "restart"};
-  wm.setMenu(menu);
-  wm.startWebPortal();
-  Serial.printf("[net] connected, IP %s\n", WiFi.localIP().toString().c_str());
-}
-
 }  // namespace
 
 void begin() {
-  loadSettings();
-  wm.setDebugOutput(false);
-  WiFi.mode(WIFI_STA);
-  WiFi.setHostname("piggy-weather");
-
-  nameParam = new WiFiManagerParameter("name", "Kid's name", current.name, 20);
-  cityParam = new WiFiManagerParameter("city", "City or ZIP code (blank = guess)", current.city, 40);
-  unitsParam = new WiFiManagerParameter("units", "Units: F or C", current.celsius ? "C" : "F", 1);
-  wm.addParameter(nameParam);
-  wm.addParameter(cityParam);
-  wm.addParameter(unitsParam);
-  wm.setSaveParamsCallback(saveParams);
-  wm.setTitle("Piggy Weather");
-  wm.setConnectTimeout(20);
-  wm.setConfigPortalBlocking(false);
-  wm.setConfigPortalTimeout(wm.getWiFiIsSaved() ? 300 : 0);
-
-  if (wm.autoConnect(kApName)) onConnected();
+  nmtv::portal::begin({"Piggy Weather", "Piggy-Weather", "piggy", fields, sizeof fields / sizeof fields[0]});
 }
 
-void loop() {
-  const bool connectedNow = wm.process();
-  if (isOnline) return;
-  if (connectedNow || WiFi.status() == WL_CONNECTED) {
-    onConnected();
-  } else if (!wm.getConfigPortalActive()) {
-    ESP.restart();
-  }
-}
+void loop() { nmtv::portal::loop(); }
 
-bool online() { return isOnline; }
+bool online() { return nmtv::portal::online(); }
 
 const Settings& settings() { return current; }
 
 bool takeSettingsChanged() {
-  const bool was = changed;
-  changed = false;
-  return was;
+  if (!nmtv::portal::takeSettingsChanged()) return false;
+  placeValid = false;
+  return true;
 }
 
 bool fetchForecast(piglogic::Forecast& out) {
@@ -167,15 +107,8 @@ bool fetchForecast(piglogic::Forecast& out) {
 
 const char* placeName() { return placeValid ? place.name : ""; }
 
-String ip() { return WiFi.localIP().toString(); }
+String ip() { return nmtv::portal::ip(); }
 
-void resetAll() {
-  wm.resetSettings();
-  prefs.begin("piggy", false);
-  prefs.clear();
-  prefs.end();
-  delay(200);
-  ESP.restart();
-}
+void resetAll() { nmtv::portal::resetAll(); }
 
 }  // namespace net
