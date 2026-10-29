@@ -8,7 +8,7 @@ Firmware for the NM-TV-154. Created from `templates/firmware`.
 2. Scan it (or join the open WiFi network `__AP__`), then open http://192.168.4.1.
 3. Pick your WiFi. Settings live at `http://__HOST__.local` afterwards.
 
-Tap the pad to count taps. Hold 10 s to forget WiFi and settings.
+Tap the pad to count taps. To forget WiFi and settings: hold 3 s, let go, then hold again for 5 s.
 
 ## Building
 

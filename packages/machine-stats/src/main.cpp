@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <WiFi.h>
-#include <time.h>
 
 #include "board.h"
 #include "display.h"
@@ -29,7 +28,6 @@ Machine snapshot[kMaxMachines];
 Mode mode = Mode::Overview;
 int detailIndex = 0;
 uint32_t modeUntilMs = 0;
-bool clockStarted = false;
 int forcedView = -1;
 int forcedDetail = 0;
 
@@ -51,15 +49,10 @@ void fillInfo() {
 }
 
 void buildState(uint32_t now) {
-  st.count = fleet::snapshot(snapshot, kMaxMachines);
+  const bool showingDetail = forcedView == static_cast<int>(View::Detail) || (forcedView < 0 && mode == Mode::Detail);
+  const int historyFor = showingDetail ? (forcedView >= 0 ? forcedDetail : detailIndex) : -1;
+  st.count = fleet::snapshot(snapshot, kMaxMachines, historyFor);
   st.machines = snapshot;
-
-  struct tm tmv;
-  st.clock[0] = '\0';
-  if (clockStarted && getLocalTime(&tmv, 0)) {
-    const int h12 = tmv.tm_hour % 12 == 0 ? 12 : tmv.tm_hour % 12;
-    snprintf(st.clock, sizeof st.clock, "%d:%02d", h12, tmv.tm_min);
-  }
 
   View v;
   if (forcedView >= 0) v = static_cast<View>(forcedView);
@@ -73,10 +66,8 @@ void buildState(uint32_t now) {
   st.qr = v == View::Setup ? nmtv::portal::apQr() : nullptr;
   if (v == View::Info) fillInfo();
 
-  const uint32_t held = touch.heldFor(now);
-  st.resetProgress = (v == View::Info && held > TouchPad::kHoldMs)
-                         ? (float)(held - TouchPad::kHoldMs) / (TouchPad::kLongHoldMs - TouchPad::kHoldMs)
-                         : -1;
+  st.resetProgress = v == View::Info ? touch.resetProgress(now) : -1;
+  st.resetArmed = v == View::Info && touch.resetArmed(now);
 }
 
 void handleTouch(uint32_t now) {
@@ -103,7 +94,7 @@ void handleTouch(uint32_t now) {
     case TouchPad::Event::Hold:
       setMode(Mode::Info, now, kInfoMs);
       break;
-    case TouchPad::Event::LongHold:
+    case TouchPad::Event::Reset:
       nmtv::portal::resetAll();
       break;
     case TouchPad::Event::None:
@@ -163,14 +154,7 @@ void loop() {
   const uint32_t now = millis();
 
   nmtv::portal::loop();
-  if (nmtv::portal::online() && !clockStarted) {
-    configTzTime(net::settings().tz, "pool.ntp.org", "time.nist.gov");
-    clockStarted = true;
-  }
-  if (nmtv::portal::takeSettingsChanged()) {
-    fleet::reconfigure(net::settings().machines);
-    configTzTime(net::settings().tz, "pool.ntp.org", "time.nist.gov");
-  }
+  if (nmtv::portal::takeSettingsChanged()) fleet::reconfigure(net::settings().machines);
 
   handleSerial(now);
   handleTouch(now);

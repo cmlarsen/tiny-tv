@@ -3,6 +3,8 @@
 #include <HTTPClient.h>
 #include <WiFi.h>
 
+#include <atomic>
+
 #include "portal.h"
 
 namespace net {
@@ -11,6 +13,7 @@ namespace {
 Settings current{};
 piglogic::Place place{};
 bool placeValid = false;
+std::atomic<bool> placeDirty{false};
 
 nmtv::PortalField fields[] = {
     {"name", "Kid's name", "Zed", current.name, sizeof current.name},
@@ -79,12 +82,13 @@ const Settings& settings() { return current; }
 
 bool takeSettingsChanged() {
   if (!nmtv::portal::takeSettingsChanged()) return false;
-  placeValid = false;
+  placeDirty = true;
   return true;
 }
 
 bool fetchForecast(piglogic::Forecast& out) {
   if (WiFi.status() != WL_CONNECTED) return false;
+  if (placeDirty.exchange(false)) placeValid = false;
   if (!placeValid) placeValid = locate();
   if (!placeValid) return false;
   char url[400];

@@ -23,6 +23,6 @@ namespace fleet {
 
 void begin(const char* endpointList);
 void reconfigure(const char* endpointList);
-int snapshot(Machine* out, int max);
+int snapshot(Machine* out, int max, int historyFor);
 
 }  // namespace fleet

@@ -8,6 +8,7 @@
 #include "portal.h"
 #include "scene.h"
 #include "touch.h"
+#include "weather.h"
 
 using piglogic::Mood;
 
@@ -15,8 +16,6 @@ namespace {
 
 constexpr uint32_t kFrameMs = 50;
 constexpr uint32_t kSetupFrameMs = 250;
-constexpr uint32_t kRefreshMs = 20UL * 60 * 1000;
-constexpr uint32_t kRetryMs = 60UL * 1000;
 constexpr uint32_t kStaleMs = 3UL * 60 * 60 * 1000;
 constexpr uint32_t kTomorrowMs = 15000;
 constexpr uint32_t kNightPeekMs = 30000;
@@ -33,11 +32,7 @@ Scene scene(lcd);
 TouchPad touch;
 SceneState st;
 
-piglogic::Forecast forecast{};
-bool haveForecast = false;
-bool fetchFailed = false;
-uint32_t lastFetchOkMs = 0;
-uint32_t nextFetchMs = 0;
+weather::Snapshot wx{};
 int clockOffsetSec = INT32_MIN;
 
 Mode mode = Mode::Home;
@@ -55,34 +50,13 @@ void setBrightness(uint8_t b) {
   lcd.setBrightness(b);
 }
 
-void fetchNow(uint32_t now) {
-  piglogic::Forecast f{};
-  if (net::fetchForecast(f)) {
-    forecast = f;
-    haveForecast = true;
-    fetchFailed = false;
-    lastFetchOkMs = now;
-    nextFetchMs = now + kRefreshMs;
-    if (f.utcOffsetSec != clockOffsetSec) {
-      clockOffsetSec = f.utcOffsetSec;
-      configTime(clockOffsetSec, 0, "pool.ntp.org", "time.nist.gov");
-    }
-    Serial.printf("[main] forecast %s now=%.1fF today=%s tomorrow=%s\n", f.date, f.nowF,
-                  piglogic::moodName(piglogic::classify(f.days[0])), piglogic::moodName(piglogic::classify(f.days[1])));
-  } else {
-    fetchFailed = true;
-    nextFetchMs = now + kRetryMs;
-    Serial.println("[main] forecast fetch failed");
-  }
-}
-
 void fillInfo(uint32_t now) {
   const Settings& cfg = net::settings();
   snprintf(st.info[0], sizeof st.info[0], "Hi, %s!", cfg.name);
-  snprintf(st.info[1], sizeof st.info[1], "Place: %s", net::placeName()[0] ? net::placeName() : "?");
+  snprintf(st.info[1], sizeof st.info[1], "Place: %s", wx.place[0] ? wx.place : "?");
   snprintf(st.info[2], sizeof st.info[2], "Setup: %s", net::ip().c_str());
-  if (haveForecast) {
-    snprintf(st.info[3], sizeof st.info[3], "Updated %lu min ago", (unsigned long)((now - lastFetchOkMs) / 60000));
+  if (wx.have) {
+    snprintf(st.info[3], sizeof st.info[3], "Updated %lu min ago", (unsigned long)((now - wx.lastOkMs) / 60000));
   } else {
     snprintf(st.info[3], sizeof st.info[3], "No weather yet");
   }
@@ -91,6 +65,11 @@ void fillInfo(uint32_t now) {
 
 void buildState(uint32_t now) {
   const Settings& cfg = net::settings();
+  wx = weather::snapshot();
+  if (wx.have && wx.forecast.utcOffsetSec != clockOffsetSec) {
+    clockOffsetSec = wx.forecast.utcOffsetSec;
+    configTime(clockOffsetSec, 0, "pool.ntp.org", "time.nist.gov");
+  }
   struct tm tmv;
   const bool haveTime = getLocalTime(&tmv, 0);
   st.clock[0] = '\0';
@@ -100,8 +79,8 @@ void buildState(uint32_t now) {
   }
   const bool night = haveTime && (tmv.tm_hour >= kNightStartHour || tmv.tm_hour < kNightEndHour);
 
-  piglogic::Forecast f = forecast;
-  bool have = haveForecast;
+  piglogic::Forecast f = wx.forecast;
+  bool have = wx.have;
   if (forcedMood >= 0 && !have) {
     f = piglogic::Forecast{"2026-01-01", 0, 72, 0, true, {{0, 78, 58, 10, 5, 0}, {0, 75, 55, 20, 5, 0}}};
     have = true;
@@ -111,8 +90,8 @@ void buildState(uint32_t now) {
   if (forcedView >= 0) v = static_cast<View>(forcedView);
   else if (!net::online()) v = View::Setup;
   else if (mode == Mode::Info) v = View::Info;
-  else if (!have) v = fetchFailed ? View::Offline : View::Loading;
-  else if (now - lastFetchOkMs > kStaleMs && forcedMood < 0) v = View::Offline;
+  else if (!have) v = wx.failed ? View::Offline : View::Loading;
+  else if (now - wx.lastOkMs > kStaleMs && forcedMood < 0) v = View::Offline;
   else if (mode == Mode::Tomorrow) v = View::Tomorrow;
   else v = night ? View::Night : View::Today;
 
@@ -158,10 +137,8 @@ void buildState(uint32_t now) {
       break;
   }
 
-  const uint32_t held = touch.heldFor(now);
-  st.resetProgress = (v == View::Info && held > TouchPad::kHoldMs)
-                         ? (float)(held - TouchPad::kHoldMs) / (TouchPad::kLongHoldMs - TouchPad::kHoldMs)
-                         : -1;
+  st.resetProgress = v == View::Info ? touch.resetProgress(now) : -1;
+  st.resetArmed = v == View::Info && touch.resetArmed(now);
 
   const bool peeking = mode != Mode::Home;
   setBrightness(night && !peeking && forcedView < 0 ? kNightBrightness : kDayBrightness);
@@ -182,7 +159,7 @@ void handleTouch(uint32_t now) {
     case TouchPad::Event::Hold:
       setMode(Mode::Info, now, kInfoMs);
       break;
-    case TouchPad::Event::LongHold:
+    case TouchPad::Event::Reset:
       st = SceneState{};
       st.view = View::Loading;
       snprintf(st.message, sizeof st.message, "Resetting WiFi... See you soon!");
@@ -220,7 +197,7 @@ void handleSerial(uint32_t now) {
     forcedView = indexOf(kViewNames, 7, line.substring(5));
     Serial.printf("forced view %d\n", forcedView);
   } else if (line == "fetch") {
-    fetchNow(now);
+    weather::refreshNow();
   }
 }
 
@@ -239,6 +216,7 @@ void setup() {
   scene.render(st, millis());
 
   net::begin();
+  weather::begin();
 }
 
 void loop() {
@@ -249,8 +227,7 @@ void loop() {
   handleSerial(now);
   handleTouch(now);
 
-  if (net::takeSettingsChanged()) nextFetchMs = now;
-  if (net::online() && (int32_t)(now - nextFetchMs) >= 0) fetchNow(now);
+  if (net::takeSettingsChanged()) weather::refreshNow();
 
   if (now - lastFrameMs >= (st.view == View::Setup ? kSetupFrameMs : kFrameMs)) {
     lastFrameMs = now;

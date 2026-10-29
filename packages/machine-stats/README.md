@@ -18,7 +18,7 @@ Use IPs: the Tailscale hostnames don't resolve from the ESP32.
 |---|---|
 | Tap | Step through each machine's detail screen, then back to the list |
 | Hold 3 s | Info screen (IP, machine count, free heap) |
-| Hold 10 s | Forget WiFi and settings, back to setup |
+| Hold 3 s, let go, hold 5 s | Forget WiFi and settings, back to setup (the second hold must start within 30 s) |
 
 Bars and gauges are green below 60%, amber below 85%, red above. A machine shows as offline
 after two failed polls in a row (1.5 s timeout each).

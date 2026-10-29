@@ -69,15 +69,68 @@ void test_baseline_follows_slow_downward_drift() {
   TEST_ASSERT_EQUAL(Event::Tap, tap(t, 78));
 }
 
-void test_hold_then_long_hold_without_tap() {
+void test_hold_fires_once_and_no_tap_on_release() {
   TouchLogic t;
   t.begin(101);
   feedFor(t, 86, 100);
   TEST_ASSERT_TRUE(t.pressed());
   TEST_ASSERT_EQUAL(Event::Hold, feedFor(t, 86, TouchLogic::kHoldMs));
-  TEST_ASSERT_EQUAL(Event::LongHold, feedFor(t, 86, TouchLogic::kLongHoldMs - TouchLogic::kHoldMs));
+  TEST_ASSERT_EQUAL(Event::None, feedFor(t, 86, 1000));
   TEST_ASSERT_EQUAL(Event::None, feedFor(t, 101, 200));
   TEST_ASSERT_FALSE(t.pressed());
+}
+
+void test_one_continuous_press_never_resets() {
+  TouchLogic t;
+  t.begin(101);
+  Event seen = Event::None;
+  for (uint32_t end = clock_ms + 59000; clock_ms < end; clock_ms += 10) {
+    const Event e = t.feed(86, clock_ms);
+    if (e == Event::Reset) seen = e;
+  }
+  TEST_ASSERT_NOT_EQUAL(Event::Reset, seen);
+}
+
+void test_hold_release_then_hold_again_resets() {
+  TouchLogic t;
+  t.begin(101);
+  TEST_ASSERT_EQUAL(Event::Hold, feedFor(t, 86, TouchLogic::kHoldMs + 100));
+  feedFor(t, 101, 1000);
+  TEST_ASSERT_TRUE(t.resetArmed(clock_ms));
+  feedFor(t, 86, 100);
+  TEST_ASSERT_TRUE(t.resetProgress(clock_ms) >= 0);
+  TEST_ASSERT_EQUAL(Event::Reset, feedFor(t, 86, TouchLogic::kResetHoldMs));
+  TEST_ASSERT_EQUAL(Event::None, feedFor(t, 101, 200));
+}
+
+void test_second_hold_must_come_within_window() {
+  TouchLogic t;
+  t.begin(101);
+  feedFor(t, 86, TouchLogic::kHoldMs + 100);
+  feedFor(t, 101, TouchLogic::kArmWindowMs + 1000);
+  TEST_ASSERT_FALSE(t.resetArmed(clock_ms));
+  feedFor(t, 86, 100);
+  TEST_ASSERT_TRUE(t.resetProgress(clock_ms) < 0);
+  TEST_ASSERT_EQUAL(Event::Hold, feedFor(t, 86, TouchLogic::kResetHoldMs));
+}
+
+void test_tap_while_armed_is_a_tap_and_disarms() {
+  TouchLogic t;
+  t.begin(101);
+  feedFor(t, 86, TouchLogic::kHoldMs + 100);
+  feedFor(t, 101, 500);
+  TEST_ASSERT_EQUAL(Event::Tap, tap(t, 86));
+  TEST_ASSERT_FALSE(t.resetArmed(clock_ms));
+}
+
+void test_stuck_press_from_drift_recovers() {
+  TouchLogic t;
+  t.begin(101);
+  feedFor(t, 101, 500);
+  feedFor(t, 90, TouchLogic::kStuckMs + 500);
+  TEST_ASSERT_FALSE(t.pressed());
+  TEST_ASSERT_UINT32_WITHIN(1, 90, t.baseline());
+  TEST_ASSERT_EQUAL(Event::Tap, tap(t, 76));
 }
 
 void test_single_glitch_sample_is_ignored() {
@@ -97,7 +150,12 @@ int main() {
   RUN_TEST(test_many_taps_with_approach_do_not_drift_baseline);
   RUN_TEST(test_baseline_can_rise_again);
   RUN_TEST(test_baseline_follows_slow_downward_drift);
-  RUN_TEST(test_hold_then_long_hold_without_tap);
+  RUN_TEST(test_hold_fires_once_and_no_tap_on_release);
+  RUN_TEST(test_one_continuous_press_never_resets);
+  RUN_TEST(test_hold_release_then_hold_again_resets);
+  RUN_TEST(test_second_hold_must_come_within_window);
+  RUN_TEST(test_tap_while_armed_is_a_tap_and_disarms);
+  RUN_TEST(test_stuck_press_from_drift_recovers);
   RUN_TEST(test_single_glitch_sample_is_ignored);
   return UNITY_END();
 }

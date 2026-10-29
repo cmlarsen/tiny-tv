@@ -1,6 +1,6 @@
 """Grab framebuffer screenshots from a running NM-TV-154 firmware over serial.
 
-Usage: shot.py OUT_DIR [NAME=CMD;CMD;sleep N ...]
+Usage: shot.py OUT_DIR [NAME[=CMD;CMD;sleep N] ...]
 Each job sends its serial commands, then `shot`, and saves NAME.png (2x scale).
 Opening the port resets the board; SHOT_WAIT (seconds, default 3.5) waits for boot.
 """
@@ -60,7 +60,7 @@ def main():
     time.sleep(float(os.environ.get("SHOT_WAIT", "3.5")))
 
     for job in jobs:
-        name, cmds = job.split("=", 1)
+        name, _, cmds = job.partition("=")
         for c in filter(None, cmds.split(";")):
             if c.startswith("sleep "):
                 time.sleep(float(c[6:]))

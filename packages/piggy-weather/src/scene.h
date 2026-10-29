@@ -20,6 +20,7 @@ struct SceneState {
   char clock[8] = "";
   uint32_t bounceAtMs = 0;
   float resetProgress = -1;
+  bool resetArmed = false;
   char info[5][40] = {};
   const char* qr = nullptr;
 };

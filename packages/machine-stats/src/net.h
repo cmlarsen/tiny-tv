@@ -4,7 +4,6 @@
 
 struct Settings {
   char machines[160];
-  char tz[48];
 };
 
 namespace net {

@@ -25,9 +25,15 @@ void test_snow_beats_cold_and_rain() {
 
 void test_rain_from_code_or_probability() {
   TEST_ASSERT_EQUAL(Mood::Rain, classify(day(61, 60, 50, 20)));
-  TEST_ASSERT_EQUAL(Mood::Rain, classify(day(81, 70)));
+  TEST_ASSERT_EQUAL(Mood::Rain, classify(day(81, 70, 50, 40)));
   TEST_ASSERT_EQUAL(Mood::Rain, classify(day(3, 70, 50, 60)));
   TEST_ASSERT_EQUAL(Mood::Rain, classify(day(0, 95, 70, 55)));
+}
+
+void test_rain_codes_need_twenty_percent_chance() {
+  TEST_ASSERT_EQUAL(Mood::Cloudy, classify(day(51, 70, 50, 6, 5, 100)));
+  TEST_ASSERT_EQUAL(Mood::Sunny, classify(day(61, 70, 50, 19, 5, 20)));
+  TEST_ASSERT_EQUAL(Mood::Rain, classify(day(51, 70, 50, 20, 5, 100)));
 }
 
 void test_low_rain_chance_is_not_rain() {
@@ -252,6 +258,7 @@ int main() {
   RUN_TEST(test_storm_beats_everything);
   RUN_TEST(test_snow_beats_cold_and_rain);
   RUN_TEST(test_rain_from_code_or_probability);
+  RUN_TEST(test_rain_codes_need_twenty_percent_chance);
   RUN_TEST(test_low_rain_chance_is_not_rain);
   RUN_TEST(test_hot_and_cold);
   RUN_TEST(test_windy_beats_chilly_but_not_cold);
