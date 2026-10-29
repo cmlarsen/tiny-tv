@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+PKGS="$ROOT/packages"
+PORT="${HUD_PORT:-/dev/cu.usbserial-210}"
+
+usage() {
+  cat <<USAGE
+usage: ./hud <command> [args]
+
+  list                 firmwares in packages/
+  new <name>           create packages/<name> from templates/firmware
+  test [name]          native tests (all packages if no name)
+  build <name>         compile firmware
+  flash <name>         compile and upload over USB
+  monitor              serial monitor (230400)
+  shot [NAME=CMDS ...] framebuffer screenshots into shots/ (see tools/shot.py)
+
+HUD_PORT overrides the serial port (default /dev/cu.usbserial-210).
+USAGE
+}
+
+firmwares() {
+  for d in "$PKGS"/*/; do
+    if [ -f "$d/src/main.cpp" ]; then basename "$d"; fi
+  done
+}
+
+need_pkg() {
+  [ -n "${1:-}" ] || { usage; exit 1; }
+  [ -f "$PKGS/$1/platformio.ini" ] || { echo "no package: $1 (try ./hud list)"; exit 1; }
+}
+
+cmd="${1:-help}"
+shift || true
+
+case "$cmd" in
+  list)
+    firmwares
+    ;;
+  new)
+    name="${1:-}"
+    echo "$name" | grep -Eq '^[a-z][a-z0-9-]{1,30}$' || { echo "name must be lowercase-kebab, 2-31 chars"; exit 1; }
+    [ ! -e "$PKGS/$name" ] || { echo "packages/$name already exists"; exit 1; }
+    title="$(echo "$name" | awk -F- '{for (i = 1; i <= NF; i++) $i = toupper(substr($i, 1, 1)) substr($i, 2)} 1')"
+    ap="$(echo "$title" | tr ' ' '-')"
+    host="$(echo "$name" | cut -c1-15 | sed 's/-$//')"
+    cp -R "$ROOT/templates/firmware" "$PKGS/$name"
+    grep -rl '__' "$PKGS/$name" | while read -r f; do
+      sed -i '' -e "s/__NAME__/$name/g" -e "s/__TITLE__/$title/g" -e "s/__AP__/$ap/g" -e "s/__HOST__/$host/g" "$f"
+    done
+    echo "created packages/$name (hotspot $ap, http://$host.local)"
+    ;;
+  test)
+    if [ -n "${1:-}" ]; then
+      need_pkg "$1"
+      (cd "$PKGS/$1" && pio test -e native)
+    else
+      failed=0
+      for d in "$PKGS"/*/; do
+        [ -d "$d/test" ] || continue
+        echo "== $(basename "$d")"
+        (cd "$d" && pio test -e native | tail -1) || failed=1
+      done
+      exit "$failed"
+    fi
+    ;;
+  build)
+    need_pkg "${1:-}"
+    (cd "$PKGS/$1" && pio run -e nmtv)
+    ;;
+  flash)
+    need_pkg "${1:-}"
+    (cd "$PKGS/$1" && pio run -e nmtv -t upload --upload-port "$PORT")
+    ;;
+  monitor)
+    pio device monitor -p "$PORT" -b 230400
+    ;;
+  shot)
+    HUD_PORT="$PORT" uv run --quiet --with pyserial --with pillow python3 -I "$ROOT/tools/shot.py" "$ROOT/shots" "$@"
+    ;;
+  help | -h | --help)
+    usage
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
+esac
