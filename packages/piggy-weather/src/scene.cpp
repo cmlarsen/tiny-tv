@@ -434,7 +434,7 @@ void drawBar(Canvas& c, const SceneState& s, const Palette& pal) {
   c.font(&fonts::FreeSansBold9pt7b);
   const int y = 227;
   if (s.view == View::Setup) {
-    c.text("Piggy-Weather  >  192.168.4.1", 120, y, kWhite, middle_center);
+    c.text("WiFi: Piggy-Weather", 120, y, kWhite, middle_center);
     return;
   }
   if (!s.haveWeather || s.view == View::Loading || s.view == View::Offline) {
@@ -513,12 +513,12 @@ void Scene::render(const SceneState& s, uint32_t t, Print* dump) {
   if (s.view == View::Today || s.view == View::Tomorrow) {
     if (s.mood == Mood::Storm && (t % 4300) < 140) flash = 150;
   }
-  for (int oy = 0; oy < kW; oy += kBandH) {
-    Canvas c{band_, oy};
-    background(c, pal, rgb(230, 230, 255), flash);
-    if (s.view == View::Info) drawInfoView(c, s);
-    else drawWeatherView(c, s, pal, t);
-    band_.pushSprite(0, oy);
-    if (dump) dump->write(static_cast<const uint8_t*>(band_.getBuffer()), kW * kBandH * 2);
-  }
+  nmtv::renderBands(
+      band_,
+      [&](Canvas& c) {
+        background(c, pal, rgb(230, 230, 255), flash);
+        if (s.view == View::Info) drawInfoView(c, s);
+        else drawWeatherView(c, s, pal, t);
+      },
+      dump);
 }

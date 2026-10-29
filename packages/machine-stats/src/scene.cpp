@@ -229,17 +229,17 @@ void Scene::render(const SceneState& s, uint32_t now, Print* dump) {
       shownMem_[i] = tm;
     }
   }
-  for (int oy = 0; oy < kW; oy += nmtv::kBandH) {
-    Canvas c{band_, oy};
-    band_.fillScreen(kBg);
-    switch (s.view) {
-      case View::Overview: overview(c, s, shownCpu_, shownMem_, now); break;
-      case View::Detail: detail(c, s, shownCpu_, shownMem_, now); break;
-      case View::Info: info(c, s); break;
-      case View::Setup: setup(c, s); break;
-      case View::Connecting: connecting(c, now); break;
-    }
-    band_.pushSprite(0, oy);
-    if (dump) dump->write(static_cast<const uint8_t*>(band_.getBuffer()), kW * nmtv::kBandH * 2);
-  }
+  nmtv::renderBands(
+      band_,
+      [&](Canvas& c) {
+        band_.fillScreen(kBg);
+        switch (s.view) {
+          case View::Overview: overview(c, s, shownCpu_, shownMem_, now); break;
+          case View::Detail: detail(c, s, shownCpu_, shownMem_, now); break;
+          case View::Info: info(c, s); break;
+          case View::Setup: setup(c, s); break;
+          case View::Connecting: connecting(c, now); break;
+        }
+      },
+      dump);
 }

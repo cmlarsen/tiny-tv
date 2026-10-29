@@ -27,10 +27,11 @@ def grab(port, name, out_dir):
         return False
     data = buf.split(b"SHOT\n", 1)[1]
     need = W * H * 2
-    while len(data) < need and time.time() - t0 < 30:
-        data += port.read(need - len(data))
-    if len(data) < need:
-        print(name, "short read", len(data))
+    tail = b"\nENDSHOT\n"
+    while len(data) < need + len(tail) and time.time() - t0 < 30:
+        data += port.read(need + len(tail) - len(data))
+    if not data[need:].startswith(tail):
+        print(name, "corrupt transfer (bytes dropped), retrying")
         return False
     img = Image.new("RGB", (W, H))
     px = img.load()

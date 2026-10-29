@@ -47,7 +47,6 @@ void saveFields() {
 
 void onConnected() {
   isOnline = true;
-  changed = false;
   MDNS.begin(cfg.hostname);
   std::vector<const char*> menu = {"param", "wifi", "info", "restart"};
   wm.setMenu(menu);

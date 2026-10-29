@@ -58,19 +58,17 @@ void pollOnce() {
     statslogic::Stats s{};
     const bool ok = fetch(eps[i], s);
     xSemaphoreTake(lock, portMAX_DELAY);
-    if (i < count && strcmp(machines[i].ep.host, eps[i].host) == 0) {
-      Machine& m = machines[i];
-      if (ok) {
-        m.stats = s;
-        m.everSeen = true;
-        m.online = true;
-        m.failures = 0;
-        m.lastOkMs = millis();
-        m.cpu.push(s.cpu);
-        m.mem.push(s.mem);
-      } else if (++m.failures >= kFailuresBeforeOffline) {
-        m.online = false;
-      }
+    Machine& m = machines[i];
+    if (ok) {
+      m.stats = s;
+      m.everSeen = true;
+      m.online = true;
+      m.failures = 0;
+      m.lastOkMs = millis();
+      m.cpu.push(s.cpu);
+      m.mem.push(s.mem);
+    } else if (++m.failures >= kFailuresBeforeOffline) {
+      m.online = false;
     }
     xSemaphoreGive(lock);
   }

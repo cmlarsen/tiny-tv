@@ -18,11 +18,6 @@ nmtv::PortalField fields[] = {
     {"units", "Units: F or C", "F", current.units, sizeof current.units},
 };
 
-void copyField(char* dst, size_t cap, const char* src) {
-  strncpy(dst, src ? src : "", cap - 1);
-  dst[cap - 1] = '\0';
-}
-
 String urlEncode(const char* s) {
   String out;
   for (const char* p = s; *p; p++) {
@@ -52,7 +47,7 @@ bool locate() {
   String body;
   if (current.city[0]) {
     char query[41];
-    copyField(query, sizeof query, current.city);
+    snprintf(query, sizeof query, "%s", current.city);
     char* comma = strchr(query, ',');
     if (comma) *comma = '\0';
     const String url = String("http://geocoding-api.open-meteo.com/v1/search?count=1&name=") + urlEncode(query);

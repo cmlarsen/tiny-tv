@@ -23,7 +23,7 @@ USAGE
 
 firmwares() {
   for d in "$PKGS"/*/; do
-    [ -f "$d/src/main.cpp" ] && basename "$d"
+    if [ -f "$d/src/main.cpp" ]; then basename "$d"; fi
   done
 }
 
@@ -57,11 +57,13 @@ case "$cmd" in
       need_pkg "$1"
       (cd "$PKGS/$1" && pio test -e native)
     else
+      failed=0
       for d in "$PKGS"/*/; do
         [ -d "$d/test" ] || continue
         echo "== $(basename "$d")"
-        (cd "$d" && pio test -e native | tail -1)
+        (cd "$d" && pio test -e native | tail -1) || failed=1
       done
+      exit "$failed"
     fi
     ;;
   build)
