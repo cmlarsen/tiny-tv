@@ -1,0 +1,7 @@
+{
+  "name": "nmtv-common",
+  "version": "0.1.0",
+  "description": "Board pins, display, touch pad and band-canvas helpers for the NM-TV-154",
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

@@ -13,6 +13,7 @@ using piglogic::Mood;
 namespace {
 
 constexpr uint32_t kFrameMs = 50;
+constexpr uint32_t kSetupFrameMs = 250;
 constexpr uint32_t kRefreshMs = 20UL * 60 * 1000;
 constexpr uint32_t kRetryMs = 60UL * 1000;
 constexpr uint32_t kStaleMs = 3UL * 60 * 60 * 1000;
@@ -149,7 +150,7 @@ void buildState(uint32_t now) {
       snprintf(st.message, sizeof st.message, "Oh no! I can't reach the internet.");
       break;
     case View::Setup:
-      snprintf(st.message, sizeof st.message, "Hi! I'm your weather pig. Scan me to set up WiFi!");
+      snprintf(st.message, sizeof st.message, "Hi! Scan me, then open 192.168.4.1 to set me up!");
       break;
     case View::Info:
       fillInfo(now);
@@ -254,7 +255,7 @@ void loop() {
   if (net::takeSettingsChanged()) nextFetchMs = now;
   if (net::online() && (int32_t)(now - nextFetchMs) >= 0) fetchNow(now);
 
-  if (now - lastFrameMs >= kFrameMs) {
+  if (now - lastFrameMs >= (st.view == View::Setup ? kSetupFrameMs : kFrameMs)) {
     lastFrameMs = now;
     buildState(now);
     scene.render(st, now);
