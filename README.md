@@ -8,6 +8,7 @@ runs one at a time.
 |---|---|
 | `packages/piggy-weather` | Weather pig for Zed (Open-Meteo forecast, outfits per weather) |
 | `packages/machine-stats` | CPU / memory HUD for the LAN dev machines (`stats-daemon`) |
+| `packages/crawler` | Self-playing first-person dungeon crawler (needs the licensed art in `assets/`) |
 | `packages/nmtv-common` | Shared: board pins, display, touch, WiFi setup portal, band canvas |
 
 ## Commands
