@@ -10,6 +10,7 @@ runs one at a time.
 | `packages/machine-stats` | CPU / memory HUD for the LAN dev machines (`stats-daemon`) |
 | `packages/fireplace` | Looping fireplace video plus a simulated fire, no WiFi |
 | `packages/pomodoro` | Pomodoro timer: tap to start, long press for settings, fill/drain progress |
+| `packages/air-quality` | Outdoor AQI from the nearest EPA AirNow monitor, plus an N-hour average chart |
 | `packages/nmtv-common` | Shared: board pins, display, touch, WiFi setup portal, band canvas |
 
 ## Commands
