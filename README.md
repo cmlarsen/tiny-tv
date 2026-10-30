@@ -12,6 +12,7 @@ runs one at a time.
 | `packages/pomodoro` | Pomodoro timer: tap to start, long press for settings, fill/drain progress |
 | `packages/air-quality` | Outdoor AQI from the nearest EPA AirNow monitor, plus an N-hour average chart |
 | `packages/crawler` | Self-playing first-person dungeon crawler (needs the licensed art in `assets/`) |
+| `packages/cellular` | Cellular-automata zoo: Life species, cyclic spirals, slime mold, Brian's Brain, reaction-diffusion |
 | `packages/nmtv-common` | Shared: board pins, display, touch, WiFi setup portal, band canvas |
 
 ## Commands
